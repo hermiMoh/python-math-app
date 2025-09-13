@@ -43,21 +43,17 @@ stage('Test') {
             # Install test-specific dependencies
             ${PIP} install pytest pytest-cov
             # Run tests with coverage, output JUnit XML for reporting
-            ${PYTHON} -m pytest --junitxml=${UNIT_TEST_REPORT} --cov=sources/ tests/
+            ${PYTHON} -m pytest --junitxml=${UNIT_TEST_REPORT} --cov=sources/ --cov-report=term tests/
         """
     }
     post {
         always {
-            junit "${UNIT_TEST_REPORT}" // Publish test results
-            
-            // CORRECTED: Use recordIssues instead of issues
-            recordIssues(
-                tools: [junitParser(pattern: 'test-reports/results.xml')],
-                sourceCodeRetention: 'MODIFIED'
-            )
-            
-            // Archive the HTML coverage report as downloadable artifact
-            archiveArtifacts artifacts: 'htmlcov/**/*', fingerprint: true
+            junit "${UNIT_TEST_REPORT}" // This will still give you basic test reporting
+            // Simple console output of test results
+            script {
+                echo "Test results available in JUnit format"
+                echo "Coverage report shown in console above"
+            }
         }
     }
 }
