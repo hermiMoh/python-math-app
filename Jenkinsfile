@@ -37,18 +37,27 @@ pipeline {
                 '''
             }
         }
-        stage('Test') {
+stage('Test') {
     steps {
         sh """
+            # Install test-specific dependencies
             ${PIP} install pytest pytest-cov
-            ${PYTHON} -m pytest --junitxml=${UNIT_TEST_REPORT} --cov=sources/ --cov-report=html tests/
+            # Run tests with coverage, output JUnit XML for reporting
+            ${PYTHON} -m pytest --junitxml=${UNIT_TEST_REPORT} --cov=sources/ tests/
         """
     }
     post {
         always {
-            junit "${UNIT_TEST_REPORT}"
-            issues(tools: [junitParser(pattern: 'test-reports/results.xml')])
-            archiveArtifacts artifacts: 'htmlcov/**/*'
+            junit "${UNIT_TEST_REPORT}" // Publish test results
+            
+            // CORRECTED: Use recordIssues instead of issues
+            recordIssues(
+                tools: [junitParser(pattern: 'test-reports/results.xml')],
+                sourceCodeRetention: 'MODIFIED'
+            )
+            
+            // Archive the HTML coverage report as downloadable artifact
+            archiveArtifacts artifacts: 'htmlcov/**/*', fingerprint: true
         }
     }
 }
