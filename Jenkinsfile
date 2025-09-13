@@ -155,14 +155,14 @@ stage('Security Scan') {
             emailext (
                 subject: "SUCCESS: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
                 body: "The build is successful. Please check at ${env.BUILD_URL}",
-                to: "devops-team@yourcompany.com"
+                to: "med.hermi@gmail.com"
             )
         }
         failure {
             emailext (
                 subject: "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'",
                 body: "The build has failed. Please check at ${env.BUILD_URL}",
-                to: "devops-team@yourcompany.com"
+                to: "med.hermi@gmail.com"
             )
         }
     }
