@@ -38,41 +38,45 @@ pipeline {
             }
         }
         stage('Test') {
-            steps {
-                sh """
-                    # Install test-specific dependencies
-                    ${PIP} install pytest pytest-cov
-                    # Run tests with coverage, output JUnit XML for reporting
-                    ${PYTHON} -m pytest --junitxml=${UNIT_TEST_REPORT} --cov=sources/ tests/
-                """
-            }
-            post {
-                always {
-                    junit "${UNIT_TEST_REPORT}" // Publish test results
-                    // Publish HTML coverage report (requires HTML Publisher plugin)
-                    publishHTML(target: [allowMissing: false, alwaysLinkToLastBuild: false, keepAll: false, reportDir: 'htmlcov', reportFiles: 'index.html', reportName: "HTML Coverage Report", reportTitles: ''])
-                }
-            }
+    steps {
+        sh """
+            ${PIP} install pytest pytest-cov
+            ${PYTHON} -m pytest --junitxml=${UNIT_TEST_REPORT} --cov=sources/ --cov-report=html tests/
+        """
+    }
+    post {
+        always {
+            junit "${UNIT_TEST_REPORT}"
+            issues(tools: [junitParser(pattern: 'test-reports/results.xml')])
+            archiveArtifacts artifacts: 'htmlcov/**/*'
         }
+    }
+}
         stage('Security Scan') {
-            steps {
-                sh """
-                    # Install safety for vulnerability scanning
-                    ${PIP} install safety
-                    # Scan dependencies, output to file and console
-                    mkdir -p ${SECURITY_SCAN_DIR}
-                    safety check -r requirements.txt --full-report --output ${SECURITY_SCAN_DIR}/safety_report.txt || true
-                """
-            }
-            post {
-                always {
-                    // Archive the security report as a build artifact
-                    archiveArtifacts artifacts: "${SECURITY_SCAN_DIR}/safety_report.txt", fingerprint: true
-                    // Publish warnings (requires Warnings NG plugin)
-                    recordIssues(tools: [pyAnalysis()])
+    steps {
+        sh """
+            # Install safety for vulnerability scanning
+            ${PIP} install safety
+            # Scan dependencies, output to file and console
+            mkdir -p ${SECURITY_SCAN_DIR}
+            safety check -r requirements.txt --full-report --output ${SECURITY_SCAN_DIR}/safety_report.txt || true
+        """
+    }
+    post {
+        always {
+            // Archive the security report as a build artifact
+            archiveArtifacts artifacts: "${SECURITY_SCAN_DIR}/safety_report.txt", fingerprint: true
+            
+            // Simple security gate - fail build on critical vulnerabilities
+            script {
+                def report = readFile("${SECURITY_SCAN_DIR}/safety_report.txt")
+                if (report.contains("CRITICAL") && !report.contains("No known security vulnerabilities found")) {
+                    error("Critical security vulnerabilities found! Build failed.")
                 }
             }
         }
+    }
+}
         stage('Package') {
             steps {
                 sh """
