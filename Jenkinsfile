@@ -118,18 +118,15 @@ stage('Security Scan') {
         }
     }
 }
-stage('Package') {
-    steps {
-        sh """
-            # Set writable cache directory
-            export PIP_CACHE_DIR=${WORKSPACE}/.pip-cache
-            # Install pyinstaller inside the venv using the cache
-            ${PIP} install --cache-dir ${PIP_CACHE_DIR} pyinstaller
-            # Create the standalone executable
-            ${PYTHON} -m PyInstaller --onefile --name my-python-app sources/calc.py
-        """
-    }
-}
+            stage('Package') {
+                steps {
+                    sh """
+                        mkdir -p ${PIP_CACHE_DIR}
+                        ${PIP} install --cache-dir ${PIP_CACHE_DIR} pyinstaller
+                        ${PYTHON} -m PyInstaller --onefile --name my-python-app sources/calc.py
+                    """
+                }
+             }
         stage('Archive Artifact') {
             steps {
                 // Archive the final executable
