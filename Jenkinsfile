@@ -25,18 +25,21 @@ pipeline {
                 checkout scm // Checks out the code from Git
             }
         }
-        stage('Build & Install') {
-            steps {
-                sh '''
-                    # Create a clean virtual environment
-                    python -m venv ${VENV_DIR}
-                    # Upgrade pip inside the venv
-                    ${PIP} install --upgrade pip setuptools wheel
-                    # Install project dependencies from requirements.txt
-                    ${PIP} install -r requirements.txt
-                '''
-            }
-        }
+stage('Build & Install') {
+    steps {
+        sh '''
+            # Create a clean virtual environment
+            python -m venv ${VENV_DIR}
+            # Set a writable cache directory for pip
+            export PIP_CACHE_DIR=${WORKSPACE}/.pip-cache
+            mkdir -p ${PIP_CACHE_DIR}
+            # Upgrade pip inside the venv
+            ${PIP} install --cache-dir ${PIP_CACHE_DIR} --upgrade pip setuptools wheel
+            # Install project dependencies from requirements.txt
+            ${PIP} install --cache-dir ${PIP_CACHE_DIR} -r requirements.txt
+        '''
+    }
+}
 stage('Test') {
     steps {
         sh """
@@ -115,16 +118,18 @@ stage('Security Scan') {
         }
     }
 }
-        stage('Package') {
-            steps {
-                sh """
-                    # Install pyinstaller inside the venv
-                    ${PIP} install pyinstaller
-                    # Create the standalone executable
-                    ${PYTHON} -m PyInstaller --onefile --name my-python-app sources/calc.py
-                """
-            }
-        }
+stage('Package') {
+    steps {
+        sh """
+            # Set writable cache directory
+            export PIP_CACHE_DIR=${WORKSPACE}/.pip-cache
+            # Install pyinstaller inside the venv using the cache
+            ${PIP} install --cache-dir ${PIP_CACHE_DIR} pyinstaller
+            # Create the standalone executable
+            ${PYTHON} -m PyInstaller --onefile --name my-python-app sources/calc.py
+        """
+    }
+}
         stage('Archive Artifact') {
             steps {
                 // Archive the final executable
