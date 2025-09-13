@@ -6,14 +6,15 @@ pipeline {
             reuseNode true
         }
     }
-    environment {
-        // Define all configuration here for easy management
-        VENV_DIR = "${env.WORKSPACE}/venv"
-        PYTHON = "${VENV_DIR}/bin/python"
-        PIP = "${VENV_DIR}/bin/pip"
-        UNIT_TEST_REPORT = 'test-reports/results.xml'
-        SECURITY_SCAN_DIR = 'security-reports'
-    }
+        environment {
+            // Define all configuration here for easy management
+            VENV_DIR = "${env.WORKSPACE}/venv"
+            PYTHON = "${VENV_DIR}/bin/python"
+            PIP = "${VENV_DIR}/bin/pip"
+            UNIT_TEST_REPORT = 'test-reports/results.xml'
+            SECURITY_SCAN_DIR = 'security-reports'
+            PIP_CACHE_DIR = "${env.WORKSPACE}/.pip-cache" // Add this line
+        }
     options {
         buildDiscarder(logRotator(numToKeepStr: '10')) // Keep only last 10 builds
         timeout(time: 15, unit: 'MINUTES') // Fail build if it hangs
@@ -25,21 +26,20 @@ pipeline {
                 checkout scm // Checks out the code from Git
             }
         }
-stage('Build & Install') {
-    steps {
-        sh '''
-            # Create a clean virtual environment
-            python -m venv ${VENV_DIR}
-            # Set a writable cache directory for pip
-            export PIP_CACHE_DIR=${WORKSPACE}/.pip-cache
-            mkdir -p ${PIP_CACHE_DIR}
-            # Upgrade pip inside the venv
-            ${PIP} install --cache-dir ${PIP_CACHE_DIR} --upgrade pip setuptools wheel
-            # Install project dependencies from requirements.txt
-            ${PIP} install --cache-dir ${PIP_CACHE_DIR} -r requirements.txt
-        '''
-    }
-}
+        stage('Build & Install') {
+            steps {
+                sh '''
+                    # Create a clean virtual environment
+                    python -m venv ${VENV_DIR}
+                    # Create writable cache directory
+                    mkdir -p ${PIP_CACHE_DIR}
+                    # Upgrade pip inside the venv using the cache
+                    ${PIP} install --cache-dir ${PIP_CACHE_DIR} --upgrade pip setuptools wheel
+                    # Install project dependencies from requirements.txt
+                    ${PIP} install --cache-dir ${PIP_CACHE_DIR} -r requirements.txt
+                '''
+            }
+        }
 stage('Test') {
     steps {
         sh """
