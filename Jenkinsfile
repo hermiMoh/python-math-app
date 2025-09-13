@@ -1,11 +1,11 @@
 pipeline {
-    agent {
-        docker {
-            image 'python:3.11-slim-bookworm' // Pin a specific, stable version
-            args '--user 1000:1000' // Run as non-root for security
-            reuseNode true
-        }
-    }
+        agent {
+            docker {
+                image 'python:3.11-bookworm' // Use the full version instead of slim
+                args '--user 1000:1000'
+                reuseNode true
+            }
+       }
         environment {
             // Define all configuration here for easy management
             VENV_DIR = "${env.WORKSPACE}/venv"
@@ -121,12 +121,15 @@ stage('Security Scan') {
             stage('Package') {
                 steps {
                     sh """
-                        mkdir -p ${PIP_CACHE_DIR}
+                        # Update package list and install binutils
+                        apt-get update -qq && apt-get install -y --no-install-recommends binutils
+                        # Install pyinstaller
                         ${PIP} install --cache-dir ${PIP_CACHE_DIR} pyinstaller
+                        # Create the standalone executable
                         ${PYTHON} -m PyInstaller --onefile --name my-python-app sources/calc.py
                     """
                 }
-             }
+       }
         stage('Archive Artifact') {
             steps {
                 // Archive the final executable
